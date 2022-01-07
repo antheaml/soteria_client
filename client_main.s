@@ -1,4 +1,3 @@
-;;; CLIENT CODE
 #include <xc.inc>
 
 extrn	SPI_MasterInit, SPI_MasterTransmit, SPI_MasterRead, UART_Setup, UART_Transmit_Byte, Client_Int_Hi
@@ -14,12 +13,41 @@ int_hi:	org	0x0008	; High priority interrupt
 	goto	Client_Int_Hi
 
 clientSetup:	
+	; ***************************************************
+	; ----- Subroutine to set up the client upon start up
+	; ***************************************************
 	call	Client_pin_Setup ; enable pins as inputs and outputs, turn on standby led
 	call	Client_Interrupt_Setup ; Set up interrupt
-	call	Client_Led_Setup ; Set up LEDs NEED TO WRITE
 	call	client_imuSetup
 	goto	client_main_polling
 	
+	
+Client_pin_Setup:
+	; ***************************************************************
+	; ----- Subroutine to set ports controlling as inputs/outputs
+	; ----- RH0 = fall signal to nurse
+	; ----- RH1 = alert button signal to nurse
+	; ----- RH2 = disable button signal to nurse
+	; ----- RH3 = fall LED
+	; ----- RH4 = alert button LED
+	; ----- RH5 = disable button LED
+	; ----- RD1 = alert button
+	; ----- RD2 = disable button
+	; ***************************************************************
+	; Enable RH0:5 pins as outputs
+	bcf	TRISH, 0, A
+	bcf	TRISH, 1, A
+	bcf	TRISH, 2, A
+	bcf	TRISH, 3, A
+	bcf	TRISH, 4, A
+	bcf	TRISH, 5, A
+	; Turn on disable LED
+	bsf	PORTH, 5, A	
+	; Enable RD1:2 as inputs
+	bsf	TRISD, 1, A	
+	bsf	TRISD, 2, A
+	return
+
 client_main_polling: 
     ; *************************************************************************************************
     ; ----- Looping subroutine which tests the logic level of RD1:2 to determine if the alert or
@@ -30,28 +58,13 @@ client_main_polling:
     ; ----- 		Disable button pressed -> PORTD2 high -> call disable subroutine triggered
     ; ----- BTFSC = bit test f, skip if clear
     ; *************************************************************************************************
-    
     BTFSC   PORTD, 1, A 
     call    client_alert
-    BTFSC   PORTD, 0, A 
-    call    nurse_fall
     BTFSC   PORTD, 2, A 
     call    nurse_remote_disable
-    bra     polling_main ; loop
-	goto	$	; Sit in infinite loop
+    bra     client_main_polling ; loop
 
 
-Client_pin_Setup:
-	; Enable RH0:2 pins as outputs
-	bcf	TRISH, 0, A
-	bcf	TRISH, 1, A
-	bcf	TRISH, 2, A
-	; Turn on disable LED
-	bsf	PORTH, 2, A
-	; Enable RD1:2 as inputs
-	bsf	TRISD, 1, A
-	bsf	TRISD, 2, A
-	return
   
 test_read:
     ;################# CHIP_ID address 0x00 but MSB = 1 (Read)
@@ -77,5 +90,3 @@ test_read:
  
 
 end	rst
-
-   
