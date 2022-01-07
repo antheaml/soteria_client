@@ -2,18 +2,26 @@
     
 global	SPI_MasterInit, SPI_MasterTransmit, SPI_MasterRead ;, read_byte1
 
-;;;; code to set up the IMU
-    
+; ---------- Module containing code to set up the IMU, including the SPI communication required to do so ---------- ;
+
 psect	spi_code, class=CODE
     
 client_imuSetup:
+    ; **************************************************************
+    ; ----- Subroutine to send instructions to IMU for configuration
+    ; **************************************************************
     call    INT_EN
     call    INT_OUT_CTRL
     call    INT_MAP
     call    INT_LOW_HIGH
     return
 
-INT_EN: ; Instructions sent to configure INT_EN register of IMU
+; ---------- Configuration instructions to IMU  ---------- ;
+
+INT_EN:
+    ; *************************************************************************
+    ; ----- Subroutine to send instructions to configure INT_EN register of IMU
+    ; *************************************************************************
     ;################# INT_EN[0]
     bcf	    PORTD, 3, A		; pull CSB low - start message
     movlw   0x50 ; IF WE EVER WANT TO READ, CHANGE MSB TO 1 
@@ -50,7 +58,10 @@ INT_EN: ; Instructions sent to configure INT_EN register of IMU
     call    NOP_delay
     return
 
-INT_OUT_CTRL: ; Instructions sent to configure INT_OUT_CTRL register of IMU
+INT_OUT_CTRL:
+    ; *******************************************************************************
+    ; ----- Subroutine to send instructions to configure INT_OUT_CTRL register of IMU
+    ; *******************************************************************************
     ;################# INT_OUT_CTRL
     bcf	    PORTD, 3, A		; pull CSB low - start message
     movlw   0x53
@@ -66,6 +77,9 @@ INT_OUT_CTRL: ; Instructions sent to configure INT_OUT_CTRL register of IMU
     
     
 INT_MAP: ; Instructions sent to configure INT_MAP register of IMU
+    ; **************************************************************************
+    ; ----- Subroutine to send instructions to configure INT_MAP register of IMU
+    ; **************************************************************************
     ;################# INT_MAP[0]
     bcf	    PORTD, 3, A		; pull CSB low - start message  CSB = RD3
     movlw   0x55 ; IF WE EVER WANT TO READ, CHANGE MSB TO 1 
@@ -102,11 +116,14 @@ INT_MAP: ; Instructions sent to configure INT_MAP register of IMU
     return
       
 INT_LOWHIGH: ; Instructions sent to configure INT_LOWHIGH register of IMU
+    ; ******************************************************************************
+    ; ----- Subroutine to send instructions to configure INT_LOWHIGH register of IMU
+    ; ******************************************************************************
     ;################# INT_LOWHIGH[0] - delay time 
     bcf	    PORTD, 3, A		; pull CSB low - start message
     movlw   0x5A ;
     call    SPI_MasterTransmit
-    movlw   0b00000001 ;							     NEEDS TESTING
+    movlw   0b00000001 ;							    
     call    SPI_MasterTransmit
     bsf	    PORTD, 3, A		; pull CSB high - stop message
     call    NOP_delay
@@ -117,7 +134,7 @@ INT_LOWHIGH: ; Instructions sent to configure INT_LOWHIGH register of IMU
     bcf	    PORTD, 3, A		; pull CSB low - start message
     movlw   0x5B
     call    SPI_MasterTransmit
-    movlw   0b00000011 ;							     NEEDS TESTING
+    movlw   0b00000011 ;							    
     call    SPI_MasterTransmit
     bsf	    PORTD, 3, A		; pull CSB high - stop message
     call    NOP_delay
@@ -160,7 +177,10 @@ INT_LOWHIGH: ; Instructions sent to configure INT_LOWHIGH register of IMU
     call    NOP_delay
     return
     
-NOP_delay: ; 4 clock cycle delay made up of NOPs
+NOP_delay: ; 
+    ; ************************************************************
+    ; ----- Delay subroutine with 4 clock cycle delay made of NOPs
+    ; ************************************************************
     ;1
     nop
     nop
@@ -183,8 +203,7 @@ NOP_delay: ; 4 clock cycle delay made up of NOPs
     nop
     return
     
-    
-;;;; Code to send SPI communication
+; ---------- Code to send SPI communication  ---------- ;    
     
 SPI_MasterInit:	; Set Clock edge to negative
 	bcf	CKE1	; CKE bit in SSP2STAT, 
@@ -196,12 +215,13 @@ SPI_MasterInit:	; Set Clock edge to negative
 	bcf	TRISC, PORTC_SCK1_POSN, A	; SCK2 output
 	;bsf	TRISC, PORTC_SDI1_POSN, A
 	;######### added by us
-	bcf	TRISD, 3, A ;; think this is right? changed E -> D for csb
+	bcf	TRISD, 3, A 
 	bsf	PORTD, 3, A
 	;######### added by us
 	return
 
 SPI_MasterTransmit:  ; Start transmission of data (held in W)
+	
 	movwf 	SSP1BUF, A 	; write data to output buffer
 Wait_Transmit:	; Wait for transmission to complete 
 	btfss 	SSP1IF		; check interrupt flag to see if data has been sent
